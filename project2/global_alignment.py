@@ -36,7 +36,7 @@ def calc_matrix(row_seq: str, col_seq: str):
 
 def load_file(filename: str):
     data = list(SeqIO.parse(filename, "fasta"))
-    data = sorted(data, key=lambda x: len(x.seq), reverse=True)
+    # data = sorted(data, key=lambda x: len(x.seq), reverse=True)
     first = str(data[0].seq)
     second = str(data[1].seq)
     return first, second
@@ -57,22 +57,36 @@ def global_alignment(filename: str):
     col = len(col_seq)
 
     # backtrack route
-    row_align = ['-'] * col
+    row_align = []
+    col_align = []
     while row > 0 and col > 0:
-        if matrix[row][col] - alignment.substitution_matrix[row_seq[row - 1]][col_seq[col - 1]] == matrix[row - 1][
-            col - 1]:
-            row_align[col - 1] = row_seq[row - 1]
+        if matrix[row][col] - alignment.substitution_matrix[row_seq[row - 1]][col_seq[col - 1]] == matrix[row - 1][col - 1]:
+            row_align = [row_seq[row-1]] + row_align
+            col_align = [col_seq[col-1]] + col_align
             row -= 1
             col -= 1
-        elif matrix[row][col] - alignment.gap_score == matrix[row][col - 1]:
-            row_align[col - 1] = "-"
+        elif matrix[row][col] - alignment.gap_score == matrix[row][col-1]:
+            row_align = ["-"] + row_align
+            col_align = [col_seq[col-1]] + col_align
             col -= 1
         else:
+            row_align = [row_seq[row-1]] + row_align
+            col_align = ["-"] + col_align
             row -= 1
 
-    row_align = ''.join(row_align)
+    if row > 0:
+        for i in reversed(range(0, row)):
+            row_align = [row_seq[i]] + row_align
+            col_align = ["-"] + col_align
+    if col > 0:
+        for i in reversed(range(0, col)):
+            col_align = [col_seq[i]] + col_align
+            row_align = ["-"] + row_align
 
-    return col_seq, row_align
+    row_align = ''.join(row_align)
+    col_align = ''.join(col_align)
+
+    return col_align, row_align
 
 
 def test(filename: str):
