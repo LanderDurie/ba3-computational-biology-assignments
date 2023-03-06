@@ -36,7 +36,6 @@ def calc_matrix(row_seq: str, col_seq: str):
 
 def load_file(filename: str):
     data = list(SeqIO.parse(filename, "fasta"))
-    # data = sorted(data, key=lambda x: len(x.seq), reverse=True)
     first = str(data[0].seq)
     second = str(data[1].seq)
     return first, second
