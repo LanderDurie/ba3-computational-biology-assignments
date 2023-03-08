@@ -100,76 +100,73 @@ def calc_matrix(row_seq: str, col_seq: str):
     cols = np.int_(len(col_seq))
     rows = np.int_(len(row_seq))
 
-    diag_matrix = [[[0 for _ in range(rows + 1)] for _ in range(3)] for _ in range(2)]
+    score_matrix = [[[0 for _ in range(rows + 1)] for _ in range(3)] for _ in range(2)]
     matrix_direction = [[np.zeros(cols + 1, dtype=np.bool_) for _ in range(rows + 1)] for _ in range(4)]
 
+    for row in range(1, rows+1):
+        side = -10 - row * 1
+        score_matrix[0][0][row] = side
+        score_matrix[0][1][row] = side
+        score_matrix[0][2][row] = -32768
+
     # fill matrix
-    for diag in range(0, cols + rows):
-        start_col = max(0, diag - rows)
-        indexes = [(diag - 1) % 2, diag % 2]
+    for col in range(1, cols+1):
+        indexes = [(col - 1) % 2, col % 2]
 
-        pos_list = [[min(rows, diag) - j - 1 + 1, start_col + j + 1] for j in
-                    range(0, min(diag, (cols - start_col), rows))]
+        side = -10 - col * 1
+        score_matrix[indexes[1]][0][0] = side
+        score_matrix[indexes[1]][1][0] = -32768
+        score_matrix[indexes[1]][2][0] = side
 
-        for pos in pos_list:
-            if diag_matrix[indexes[0]][0][pos[0] - 1] - diag_matrix[indexes[0]][1][pos[0] - 1] < 10:
+        for row in range(1, rows+1):
+
+            if score_matrix[indexes[1]][0][row - 1] - score_matrix[indexes[1]][1][row - 1] < 10:
                 # set lower max
-                diag_matrix[indexes[1]][1][pos[0]] = diag_matrix[indexes[0]][1][pos[0] - 1] - 1
+                score_matrix[indexes[1]][1][row] = score_matrix[indexes[1]][1][row - 1] - 1
                 # set lower max index
-                matrix_direction[1][pos[0]][pos[1]] = np.True_
+                matrix_direction[1][row][col] = np.True_
             else:
                 # set lower max
-                diag_matrix[indexes[1]][1][pos[0]] = diag_matrix[indexes[0]][0][pos[0] - 1] - 11
+                score_matrix[indexes[1]][1][row] = score_matrix[indexes[1]][0][row - 1] - 11
 
-            if diag_matrix[indexes[0]][0][pos[0]] - diag_matrix[indexes[0]][2][pos[0]] < 10:
+            if score_matrix[indexes[0]][0][row] - score_matrix[indexes[0]][2][row] < 10:
                 # set upper max
-                diag_matrix[indexes[1]][2][pos[0]] = diag_matrix[indexes[0]][2][pos[0]] - 1
+                score_matrix[indexes[1]][2][row] = score_matrix[indexes[0]][2][row] - 1
                 # set upper max index
-                matrix_direction[2][pos[0]][pos[1]] = np.True_
+                matrix_direction[2][row][col] = np.True_
             else:
                 # set upper max
-                diag_matrix[indexes[1]][2][pos[0]] = diag_matrix[indexes[0]][0][pos[0]] - 11
+                score_matrix[indexes[1]][2][row] = score_matrix[indexes[0]][0][row] - 11
 
             # calculate and assign middle matrix
 
-            follow_score = diag_matrix[indexes[1]][0][pos[0] - 1] + substitution_matrix[row_seq[pos[0] - 1] + col_seq[pos[1] - 1]]
+            follow_score = score_matrix[indexes[0]][0][row - 1] + substitution_matrix[row_seq[row - 1] + col_seq[col - 1]]
 
             # compare lower and upper
-            if diag_matrix[indexes[1]][1][pos[0]] < diag_matrix[indexes[1]][2][pos[0]]:
+            if score_matrix[indexes[1]][1][row] < score_matrix[indexes[1]][2][row]:
                 # compare follow and upper
-                if follow_score < diag_matrix[indexes[1]][2][pos[0]]:
+                if follow_score < score_matrix[indexes[1]][2][row]:
                     # set middle max
-                    diag_matrix[indexes[1]][0][pos[0]] = diag_matrix[indexes[1]][2][pos[0]]
+                    score_matrix[indexes[1]][0][row] = score_matrix[indexes[1]][2][row]
                     # set middle max index
-                    matrix_direction[0][pos[0]][pos[1]] = np.True_
+                    matrix_direction[0][row][col] = np.True_
                 else:
                     # set middle max
-                    diag_matrix[indexes[1]][0][pos[0]] = follow_score
+                    score_matrix[indexes[1]][0][row] = follow_score
                 # set lower / upper direction
-                matrix_direction[3][pos[0]][pos[1]] = np.True_
+                matrix_direction[3][row][col] = np.True_
             else:
                 # compare follow and lower
-                if follow_score < diag_matrix[indexes[1]][1][pos[0]]:
+                if follow_score < score_matrix[indexes[1]][1][row]:
                     # set middle max
-                    diag_matrix[indexes[1]][0][pos[0]] = diag_matrix[indexes[1]][1][pos[0]]
+                    score_matrix[indexes[1]][0][row] = score_matrix[indexes[1]][1][row]
                     # set middle max index
-                    matrix_direction[0][pos[0]][pos[1]] = np.True_
+                    matrix_direction[0][row][col] = np.True_
                 else:
                     # set middle max
-                    diag_matrix[indexes[1]][0][pos[0]] = follow_score
+                    score_matrix[indexes[1]][0][row] = follow_score
 
-        # new init values
-        side = -11 - diag * 1
-        if diag < cols:
-            diag_matrix[indexes[1]][0][0] = side
-            diag_matrix[indexes[1]][1][0] = side
-            diag_matrix[indexes[1]][2][0] = -32768
-        if diag < rows:
-            diag_matrix[indexes[1]][0][diag + 1] = side
-            diag_matrix[indexes[1]][1][diag + 1] = -32768
-            diag_matrix[indexes[1]][2][diag + 1] = side
-
-    score = int(max((diag_matrix[(cols + rows - 1) % 2][x][-1] for x in range(3))))
+    score = int(max((score_matrix[cols % 2][x][-1] for x in range(3))))
 
     return score, matrix_direction
 
