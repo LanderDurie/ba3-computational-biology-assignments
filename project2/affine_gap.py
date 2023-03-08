@@ -106,37 +106,57 @@ def calc_matrix(row_seq: str, col_seq: str, alignment: list):
     matrix_direction = np.zeros([rows + 1, cols + 1, 4], dtype=np.bool_)
     diag_matrix = np.zeros([2, rows + 1, 3], dtype=np.int_)
 
+    def calc_col(pos):
+        # options
+        if diag_matrix[indexes[0]][pos[0] - 1][0] - diag_matrix[indexes[0]][pos[0] - 1][1] < 10:
+            lower_max = diag_matrix[indexes[0]][pos[0] - 1][1] - 1
+            lower_max_index = 1
+        else:
+            lower_max = diag_matrix[indexes[0]][pos[0] - 1][0] - 11
+            lower_max_index = 0
+
+        if diag_matrix[indexes[0]][pos[0]][0] - diag_matrix[indexes[0]][pos[0]][2] < 10:
+            upper_max = diag_matrix[indexes[0]][pos[0]][2] - 1
+            upper_max_index = 1
+        else:
+            upper_max = diag_matrix[indexes[0]][pos[0]][0] - 11
+            upper_max_index = 0
+
+
+        # diagonal
+        follow_score = diag_matrix[indexes[1]][pos[0] - 1][0] + alignment[0][row_seq[pos[0] - 1] + col_seq[pos[1] - 1]]
+        if lower_max < upper_max:
+            if follow_score < upper_max:
+                middle_max = upper_max
+                middle_max_index = 1
+            else:
+                middle_max = follow_score
+                middle_max_index = 0
+            direction = 1
+        else:
+            if follow_score < lower_max:
+                middle_max = lower_max
+                middle_max_index = 1
+            else:
+                middle_max = follow_score
+                middle_max_index = 0
+            direction = 0
+
+
+        # assign
+        diag_matrix[indexes[1]][pos[0]] = middle_max, lower_max, upper_max
+        matrix_direction[pos[0]][pos[1]] = middle_max_index, lower_max_index, upper_max_index, direction
+
+
     # fill matrix
     for diag in range(0, cols + rows):
         start_col = max(0, diag - rows)
         indexes = [(diag - 1) % 2, diag % 2]
 
-        for j in range(0, min(diag, (cols - start_col), rows)):
-            row = min(rows, diag) - j - 1 + 1
-            col = start_col + j + 1
+        pos_list = [[min(rows, diag) - j - 1 + 1, start_col + j + 1] for j in
+                    range(0, min(diag, (cols - start_col), rows))]
 
-            # options
-            lower_options = [diag_matrix[indexes[0]][row - 1][0] + alignment[1],
-                             diag_matrix[indexes[0]][row - 1][1] + alignment[2]]
-            upper_options = [diag_matrix[indexes[0]][row][0] + alignment[1],
-                             diag_matrix[indexes[0]][row][2] + alignment[2]]
-
-            # followed path
-            lower_max = lower_options.index(max(lower_options))
-            upper_max = upper_options.index(max(upper_options))
-
-            # diagonal
-            middle_options = [diag_matrix[indexes[1]][row - 1][0] + alignment[0][row_seq[row - 1] + col_seq[col - 1]],
-                              lower_options[lower_max], upper_options[upper_max]]
-            middle_max = middle_options.index(max(middle_options))
-
-            # fill matrix
-            diag_matrix[indexes[1]][row] = middle_options[middle_max], lower_options[lower_max], upper_options[upper_max]
-
-            if middle_max == 0:
-                matrix_direction[row][col] = 0, lower_max, upper_max, 0
-            else:
-                matrix_direction[row][col] = 1, lower_max, upper_max, middle_max-1
+        [calc_col(pos) for pos in pos_list]
 
         # new init values
         side = alignment[1] + diag * alignment[2]
@@ -231,7 +251,9 @@ def affine_gap(filename: str):
     res = global_alignment(filename)
     print(f"seq01 : {res[0]}")
     print(f"seq02 : {res[1]}")
-    print(f"ETA: {time.time() - start}")
+    print(f"ET: {time.time() - start}")
 
 
-affine_gap("data/data_1000_benchmark.fna")
+if __name__ == '__main__':
+    affine_gap("data/data_1000_benchmark.fna")
+    # affine_gap("data/data_01_affine.fna")
