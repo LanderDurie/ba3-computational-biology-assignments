@@ -1,172 +1,102 @@
 import time
-import gc
 from Bio.SeqIO import parse
-import numpy as np
-
-substitution_matrix = {'AA': 4, 'AR': -1, 'AN': -2, 'AD': -2, 'AC': 0, 'AQ': -1, 'AE': -1, 'AG': 0,
-                       'AH': -2, 'AI': -1, 'AL': -1, 'AK': -1, 'AM': -1, 'AF': -2, 'AP': -1,
-                       'AS': 1, 'AT': 0, 'AW': -3, 'AY': -2, 'AV': 0, 'AB': -2, 'AJ': -1, 'AZ': -1,
-                       'AX': -1, 'A*': -4, 'RA': -1, 'RR': 5, 'RN': 0, 'RD': -2, 'RC': -3, 'RQ': 1,
-                       'RE': 0, 'RG': -2, 'RH': 0, 'RI': -3, 'RL': -2, 'RK': 2, 'RM': -1, 'RF': -3,
-                       'RP': -2, 'RS': -1, 'RT': -1, 'RW': -3, 'RY': -2, 'RV': -3, 'RB': -1,
-                       'RJ': -2, 'RZ': 0, 'RX': -1, 'R*': -4, 'NA': -2, 'NR': 0, 'NN': 6, 'ND': 1,
-                       'NC': -3, 'NQ': 0, 'NE': 0, 'NG': 0, 'NH': 1, 'NI': -3, 'NL': -3, 'NK': 0,
-                       'NM': -2, 'NF': -3, 'NP': -2, 'NS': 1, 'NT': 0, 'NW': -4, 'NY': -2, 'NV': -3,
-                       'NB': 4, 'NJ': -3, 'NZ': 0, 'NX': -1, 'N*': -4, 'DA': -2, 'DR': -2, 'DN': 1,
-                       'DD': 6, 'DC': -3, 'DQ': 0, 'DE': 2, 'DG': -1, 'DH': -1, 'DI': -3, 'DL': -4,
-                       'DK': -1, 'DM': -3, 'DF': -3, 'DP': -1, 'DS': 0, 'DT': -1, 'DW': -4,
-                       'DY': -3, 'DV': -3, 'DB': 4, 'DJ': -3, 'DZ': 1, 'DX': -1, 'D*': -4, 'CA': 0,
-                       'CR': -3, 'CN': -3, 'CD': -3, 'CC': 9, 'CQ': -3, 'CE': -4, 'CG': -3,
-                       'CH': -3, 'CI': -1, 'CL': -1, 'CK': -3, 'CM': -1, 'CF': -2, 'CP': -3,
-                       'CS': -1, 'CT': -1, 'CW': -2, 'CY': -2, 'CV': -1, 'CB': -3, 'CJ': -1,
-                       'CZ': -3, 'CX': -1, 'C*': -4, 'QA': -1, 'QR': 1, 'QN': 0, 'QD': 0, 'QC': -3,
-                       'QQ': 5, 'QE': 2, 'QG': -2, 'QH': 0, 'QI': -3, 'QL': -2, 'QK': 1, 'QM': 0,
-                       'QF': -3, 'QP': -1, 'QS': 0, 'QT': -1, 'QW': -2, 'QY': -1, 'QV': -2, 'QB': 0,
-                       'QJ': -2, 'QZ': 4, 'QX': -1, 'Q*': -4, 'EA': -1, 'ER': 0, 'EN': 0, 'ED': 2,
-                       'EC': -4, 'EQ': 2, 'EE': 5, 'EG': -2, 'EH': 0, 'EI': -3, 'EL': -3, 'EK': 1,
-                       'EM': -2, 'EF': -3, 'EP': -1, 'ES': 0, 'ET': -1, 'EW': -3, 'EY': -2,
-                       'EV': -2, 'EB': 1, 'EJ': -3, 'EZ': 4, 'EX': -1, 'E*': -4, 'GA': 0, 'GR': -2,
-                       'GN': 0, 'GD': -1, 'GC': -3, 'GQ': -2, 'GE': -2, 'GG': 6, 'GH': -2, 'GI': -4,
-                       'GL': -4, 'GK': -2, 'GM': -3, 'GF': -3, 'GP': -2, 'GS': 0, 'GT': -2,
-                       'GW': -2, 'GY': -3, 'GV': -3, 'GB': -1, 'GJ': -4, 'GZ': -2, 'GX': -1,
-                       'G*': -4, 'HA': -2, 'HR': 0, 'HN': 1, 'HD': -1, 'HC': -3, 'HQ': 0, 'HE': 0,
-                       'HG': -2, 'HH': 8, 'HI': -3, 'HL': -3, 'HK': -1, 'HM': -2, 'HF': -1,
-                       'HP': -2, 'HS': -1, 'HT': -2, 'HW': -2, 'HY': 2, 'HV': -3, 'HB': 0, 'HJ': -3,
-                       'HZ': 0, 'HX': -1, 'H*': -4, 'IA': -1, 'IR': -3, 'IN': -3, 'ID': -3,
-                       'IC': -1, 'IQ': -3, 'IE': -3, 'IG': -4, 'IH': -3, 'II': 4, 'IL': 2, 'IK': -3,
-                       'IM': 1, 'IF': 0, 'IP': -3, 'IS': -2, 'IT': -1, 'IW': -3, 'IY': -1, 'IV': 3,
-                       'IB': -3, 'IJ': 3, 'IZ': -3, 'IX': -1, 'I*': -4, 'LA': -1, 'LR': -2,
-                       'LN': -3, 'LD': -4, 'LC': -1, 'LQ': -2, 'LE': -3, 'LG': -4, 'LH': -3,
-                       'LI': 2, 'LL': 4, 'LK': -2, 'LM': 2, 'LF': 0, 'LP': -3, 'LS': -2, 'LT': -1,
-                       'LW': -2, 'LY': -1, 'LV': 1, 'LB': -4, 'LJ': 3, 'LZ': -3, 'LX': -1, 'L*': -4,
-                       'KA': -1, 'KR': 2, 'KN': 0, 'KD': -1, 'KC': -3, 'KQ': 1, 'KE': 1, 'KG': -2,
-                       'KH': -1, 'KI': -3, 'KL': -2, 'KK': 5, 'KM': -1, 'KF': -3, 'KP': -1, 'KS': 0,
-                       'KT': -1, 'KW': -3, 'KY': -2, 'KV': -2, 'KB': 0, 'KJ': -3, 'KZ': 1, 'KX': -1,
-                       'K*': -4, 'MA': -1, 'MR': -1, 'MN': -2, 'MD': -3, 'MC': -1, 'MQ': 0,
-                       'ME': -2, 'MG': -3, 'MH': -2, 'MI': 1, 'ML': 2, 'MK': -1, 'MM': 5, 'MF': 0,
-                       'MP': -2, 'MS': -1, 'MT': -1, 'MW': -1, 'MY': -1, 'MV': 1, 'MB': -3, 'MJ': 2,
-                       'MZ': -1, 'MX': -1, 'M*': -4, 'FA': -2, 'FR': -3, 'FN': -3, 'FD': -3,
-                       'FC': -2, 'FQ': -3, 'FE': -3, 'FG': -3, 'FH': -1, 'FI': 0, 'FL': 0, 'FK': -3,
-                       'FM': 0, 'FF': 6, 'FP': -4, 'FS': -2, 'FT': -2, 'FW': 1, 'FY': 3, 'FV': -1,
-                       'FB': -3, 'FJ': 0, 'FZ': -3, 'FX': -1, 'F*': -4, 'PA': -1, 'PR': -2,
-                       'PN': -2, 'PD': -1, 'PC': -3, 'PQ': -1, 'PE': -1, 'PG': -2, 'PH': -2,
-                       'PI': -3, 'PL': -3, 'PK': -1, 'PM': -2, 'PF': -4, 'PP': 7, 'PS': -1,
-                       'PT': -1, 'PW': -4, 'PY': -3, 'PV': -2, 'PB': -2, 'PJ': -3, 'PZ': -1,
-                       'PX': -1, 'P*': -4, 'SA': 1, 'SR': -1, 'SN': 1, 'SD': 0, 'SC': -1, 'SQ': 0,
-                       'SE': 0, 'SG': 0, 'SH': -1, 'SI': -2, 'SL': -2, 'SK': 0, 'SM': -1, 'SF': -2,
-                       'SP': -1, 'SS': 4, 'ST': 1, 'SW': -3, 'SY': -2, 'SV': -2, 'SB': 0, 'SJ': -2,
-                       'SZ': 0, 'SX': -1, 'S*': -4, 'TA': 0, 'TR': -1, 'TN': 0, 'TD': -1, 'TC': -1,
-                       'TQ': -1, 'TE': -1, 'TG': -2, 'TH': -2, 'TI': -1, 'TL': -1, 'TK': -1,
-                       'TM': -1, 'TF': -2, 'TP': -1, 'TS': 1, 'TT': 5, 'TW': -2, 'TY': -2, 'TV': 0,
-                       'TB': -1, 'TJ': -1, 'TZ': -1, 'TX': -1, 'T*': -4, 'WA': -3, 'WR': -3,
-                       'WN': -4, 'WD': -4, 'WC': -2, 'WQ': -2, 'WE': -3, 'WG': -2, 'WH': -2,
-                       'WI': -3, 'WL': -2, 'WK': -3, 'WM': -1, 'WF': 1, 'WP': -4, 'WS': -3,
-                       'WT': -2, 'WW': 11, 'WY': 2, 'WV': -3, 'WB': -4, 'WJ': -2, 'WZ': -2,
-                       'WX': -1, 'W*': -4, 'YA': -2, 'YR': -2, 'YN': -2, 'YD': -3, 'YC': -2,
-                       'YQ': -1, 'YE': -2, 'YG': -3, 'YH': 2, 'YI': -1, 'YL': -1, 'YK': -2,
-                       'YM': -1, 'YF': 3, 'YP': -3, 'YS': -2, 'YT': -2, 'YW': 2, 'YY': 7, 'YV': -1,
-                       'YB': -3, 'YJ': -1, 'YZ': -2, 'YX': -1, 'Y*': -4, 'VA': 0, 'VR': -3,
-                       'VN': -3, 'VD': -3, 'VC': -1, 'VQ': -2, 'VE': -2, 'VG': -3, 'VH': -3,
-                       'VI': 3, 'VL': 1, 'VK': -2, 'VM': 1, 'VF': -1, 'VP': -2, 'VS': -2, 'VT': 0,
-                       'VW': -3, 'VY': -1, 'VV': 4, 'VB': -3, 'VJ': 2, 'VZ': -2, 'VX': -1, 'V*': -4,
-                       'BA': -2, 'BR': -1, 'BN': 4, 'BD': 4, 'BC': -3, 'BQ': 0, 'BE': 1, 'BG': -1,
-                       'BH': 0, 'BI': -3, 'BL': -4, 'BK': 0, 'BM': -3, 'BF': -3, 'BP': -2, 'BS': 0,
-                       'BT': -1, 'BW': -4, 'BY': -3, 'BV': -3, 'BB': 4, 'BJ': -3, 'BZ': 0, 'BX': -1,
-                       'B*': -4, 'JA': -1, 'JR': -2, 'JN': -3, 'JD': -3, 'JC': -1, 'JQ': -2,
-                       'JE': -3, 'JG': -4, 'JH': -3, 'JI': 3, 'JL': 3, 'JK': -3, 'JM': 2, 'JF': 0,
-                       'JP': -3, 'JS': -2, 'JT': -1, 'JW': -2, 'JY': -1, 'JV': 2, 'JB': -3, 'JJ': 3,
-                       'JZ': -3, 'JX': -1, 'J*': -4, 'ZA': -1, 'ZR': 0, 'ZN': 0, 'ZD': 1, 'ZC': -3,
-                       'ZQ': 4, 'ZE': 4, 'ZG': -2, 'ZH': 0, 'ZI': -3, 'ZL': -3, 'ZK': 1, 'ZM': -1,
-                       'ZF': -3, 'ZP': -1, 'ZS': 0, 'ZT': -1, 'ZW': -2, 'ZY': -2, 'ZV': -2, 'ZB': 0,
-                       'ZJ': -3, 'ZZ': 4, 'ZX': -1, 'Z*': -4, 'XA': -1, 'XR': -1, 'XN': -1,
-                       'XD': -1, 'XC': -1, 'XQ': -1, 'XE': -1, 'XG': -1, 'XH': -1, 'XI': -1,
-                       'XL': -1, 'XK': -1, 'XM': -1, 'XF': -1, 'XP': -1, 'XS': -1, 'XT': -1,
-                       'XW': -1, 'XY': -1, 'XV': -1, 'XB': -1, 'XJ': -1, 'XZ': -1, 'XX': -1,
-                       'X*': -4, '*A': -4, '*R': -4, '*N': -4, '*D': -4, '*C': -4, '*Q': -4,
-                       '*E': -4, '*G': -4, '*H': -4, '*I': -4, '*L': -4, '*K': -4, '*M': -4,
-                       '*F': -4, '*P': -4, '*S': -4, '*T': -4, '*W': -4, '*Y': -4, '*V': -4,
-                       '*B': -4, '*J': -4, '*Z': -4, '*X': -4, '**': 1}
+from numpy import True_, bool_, zeros
 
 
-def print_matrix(matrix: np.array):
-    for i in range(3):
-        print("\n")
-        for row in matrix:
-            print(" ".join(["".join([" "] * (1 if item[i] >= 0 else 0)) + str(item[i]) + "".join(
-                [" "] * (6 - (1 if item[i] >= 0 else 0) - len(str(item[i])))) for item in row]))
+BLOSUM = {
+    'A': {'A': 4, 'R':-1, 'N':-2, 'D':-2, "C": 0, 'Q':-1, 'E':-1, 'G': 0, 'H':-2, 'I':-1, 'L':-1, 'K':-1, 'M':-1, 'F':-2, 'P':-1, 'S': 1, 'T': 0, 'W':-3, 'Y':-2, 'V': 0, 'B':-2, 'Z':-1, 'X': 0, '*':-4},
+    'R': {'A':-1, 'R': 5, 'N': 0, 'D':-2, "C":-3, 'Q': 1, 'E': 0, 'G':-2, 'H': 0, 'I':-3, 'L':-2, 'K': 2, 'M':-1, 'F':-3, 'P':-2, 'S':-1, 'T':-1, 'W':-3, 'Y':-2, 'V':-3, 'B':-1, 'Z': 0, 'X':-1, '*':-4},
+    'N': {'A':-2, 'R': 0, 'N': 6, 'D': 1, "C":-3, 'Q': 0, 'E': 0, 'G': 0, 'H': 1, 'I':-3, 'L':-3, 'K': 0, 'M':-2, 'F':-3, 'P':-2, 'S': 1, 'T': 0, 'W':-4, 'Y':-2, 'V':-3, 'B': 3, 'Z': 0, 'X':-1, '*':-4},
+    'D': {'A':-2, 'R':-2, 'N': 1, 'D': 6, "C":-3, 'Q': 0, 'E': 2, 'G':-1, 'H':-1, 'I':-3, 'L':-4, 'K':-1, 'M':-3, 'F':-3, 'P':-1, 'S': 0, 'T':-1, 'W':-4, 'Y':-3, 'V':-3, 'B': 4, 'Z': 1, 'X':-1, '*':-4},
+    'C': {'A': 0, 'R':-3, 'N':-3, 'D':-3, "C": 9, 'Q':-3, 'E':-4, 'G':-3, 'H':-3, 'I':-1, 'L':-1, 'K':-3, 'M':-1, 'F':-2, 'P':-3, 'S':-1, 'T':-1, 'W':-2, 'Y':-2, 'V':-1, 'B':-3, 'Z':-3, 'X':-2, '*':-4},
+    'Q': {'A':-1, 'R': 1, 'N': 0, 'D': 0, "C":-3, 'Q': 5, 'E': 2, 'G':-2, 'H': 0, 'I':-3, 'L':-2, 'K': 1, 'M': 0, 'F':-3, 'P':-1, 'S': 0, 'T':-1, 'W':-2, 'Y':-1, 'V':-2, 'B': 0, 'Z': 3, 'X':-1, '*':-4},
+    'E': {'A':-1, 'R': 0, 'N': 0, 'D': 2, "C":-4, 'Q': 2, 'E': 5, 'G':-2, 'H': 0, 'I':-3, 'L':-3, 'K': 1, 'M':-2, 'F':-3, 'P':-1, 'S': 0, 'T':-1, 'W':-3, 'Y':-2, 'V':-2, 'B': 1, 'Z': 4, 'X':-1, '*':-4},
+    'G': {'A': 0, 'R':-2, 'N': 0, 'D':-1, "C":-3, 'Q':-2, 'E':-2, 'G': 6, 'H':-2, 'I':-4, 'L':-4, 'K':-2, 'M':-3, 'F':-3, 'P':-2, 'S': 0, 'T':-2, 'W':-2, 'Y':-3, 'V':-3, 'B':-1, 'Z':-2, 'X':-1, '*':-4},
+    'H': {'A':-2, 'R': 0, 'N': 1, 'D':-1, "C":-3, 'Q': 0, 'E': 0, 'G':-2, 'H': 8, 'I':-3, 'L':-3, 'K':-1, 'M':-2, 'F':-1, 'P':-2, 'S':-1, 'T':-2, 'W':-2, 'Y': 2, 'V':-3, 'B': 0, 'Z': 0, 'X':-1, '*':-4},
+    'I': {'A':-1, 'R':-3, 'N':-3, 'D':-3, "C":-1, 'Q':-3, 'E':-3, 'G':-4, 'H':-3, 'I': 4, 'L': 2, 'K':-3, 'M': 1, 'F': 0, 'P':-3, 'S':-2, 'T':-1, 'W':-3, 'Y':-1, 'V': 3, 'B':-3, 'Z':-3, 'X':-1, '*':-4},
+    'L': {'A':-1, 'R':-2, 'N':-3, 'D':-4, "C":-1, 'Q':-2, 'E':-3, 'G':-4, 'H':-3, 'I': 2, 'L': 4, 'K':-2, 'M': 2, 'F': 0, 'P':-3, 'S':-2, 'T':-1, 'W':-2, 'Y':-1, 'V': 1, 'B':-4, 'Z':-3, 'X':-1, '*':-4},
+    'K': {'A':-1, 'R': 2, 'N': 0, 'D':-1, "C":-3, 'Q': 1, 'E': 1, 'G':-2, 'H':-1, 'I':-3, 'L':-2, 'K': 5, 'M':-1, 'F':-3, 'P':-1, 'S': 0, 'T':-1, 'W':-3, 'Y':-2, 'V':-2, 'B': 0, 'Z': 1, 'X':-1, '*':-4},
+    'M': {'A':-1, 'R':-1, 'N':-2, 'D':-3, "C":-1, 'Q': 0, 'E':-2, 'G':-3, 'H':-2, 'I': 1, 'L': 2, 'K':-1, 'M': 5, 'F': 0, 'P':-2, 'S':-1, 'T':-1, 'W':-1, 'Y':-1, 'V': 1, 'B':-3, 'Z':-1, 'X':-1, '*':-4},
+    'F': {'A':-2, 'R':-3, 'N':-3, 'D':-3, "C":-2, 'Q':-3, 'E':-3, 'G':-3, 'H':-1, 'I': 0, 'L': 0, 'K':-3, 'M': 0, 'F': 6, 'P':-4, 'S':-2, 'T':-2, 'W': 1, 'Y': 3, 'V':-1, 'B':-3, 'Z':-3, 'X':-1, '*':-4},
+    'P': {'A':-1, 'R':-2, 'N':-2, 'D':-1, "C":-3, 'Q':-1, 'E':-1, 'G':-2, 'H':-2, 'I':-3, 'L':-3, 'K':-1, 'M':-2, 'F':-4, 'P': 7, 'S':-1, 'T':-1, 'W':-4, 'Y':-3, 'V':-2, 'B':-2, 'Z':-1, 'X':-2, '*':-4},
+    'S': {'A': 1, 'R':-1, 'N': 1, 'D': 0, "C":-1, 'Q': 0, 'E': 0, 'G': 0, 'H':-1, 'I':-2, 'L':-2, 'K': 0, 'M':-1, 'F':-2, 'P':-1, 'S': 4, 'T': 1, 'W':-3, 'Y':-2, 'V':-2, 'B': 0, 'Z': 0, 'X': 0, '*':-4},
+    'T': {'A': 0, 'R':-1, 'N': 0, 'D':-1, "C":-1, 'Q':-1, 'E':-1, 'G':-2, 'H':-2, 'I':-1, 'L':-1, 'K':-1, 'M':-1, 'F':-2, 'P':-1, 'S': 1, 'T': 5, 'W':-2, 'Y':-2, 'V': 0, 'B':-1, 'Z':-1, 'X': 0, '*':-4},
+    'W': {'A':-3, 'R':-3, 'N':-4, 'D':-4, "C":-2, 'Q':-2, 'E':-3, 'G':-2, 'H':-2, 'I':-3, 'L':-2, 'K':-3, 'M':-1, 'F': 1, 'P':-4, 'S':-3, 'T':-2, 'W':11, 'Y': 2, 'V':-3, 'B':-4, 'Z':-3, 'X':-2, '*':-4},
+    'Y': {'A':-2, 'R':-2, 'N':-2, 'D':-3, "C":-2, 'Q':-1, 'E':-2, 'G':-3, 'H': 2, 'I':-1, 'L':-1, 'K':-2, 'M':-1, 'F': 3, 'P':-3, 'S':-2, 'T':-2, 'W': 2, 'Y': 7, 'V':-1, 'B':-3, 'Z':-2, 'X':-1, '*':-4},
+    'V': {'A': 0, 'R':-3, 'N':-3, 'D':-3, "C":-1, 'Q':-2, 'E':-2, 'G':-3, 'H':-3, 'I': 3, 'L': 1, 'K':-2, 'M': 1, 'F':-1, 'P':-2, 'S':-2, 'T': 0, 'W':-3, 'Y':-1, 'V': 4, 'B':-3, 'Z':-2, 'X':-1, '*':-4},
+    'B': {'A':-2, 'R':-1, 'N': 3, 'D': 4, "C":-3, 'Q': 0, 'E': 1, 'G':-1, 'H': 0, 'I':-3, 'L':-4, 'K': 0, 'M':-3, 'F':-3, 'P':-2, 'S': 0, 'T':-1, 'W':-4, 'Y':-3, 'V':-3, 'B': 4, 'Z': 1, 'X':-1, '*':-4},
+    'Z': {'A':-1, 'R': 0, 'N': 0, 'D': 1, "C":-3, 'Q': 3, 'E': 4, 'G':-2, 'H': 0, 'I':-3, 'L':-3, 'K': 1, 'M':-1, 'F':-3, 'P':-1, 'S': 0, 'T':-1, 'W':-3, 'Y':-2, 'V':-2, 'B': 1, 'Z': 4, 'X':-1, '*':-4},
+    'X': {'A': 0, 'R':-1, 'N':-1, 'D':-1, "C":-2, 'Q':-1, 'E':-1, 'G':-1, 'H':-1, 'I':-1, 'L':-1, 'K':-1, 'M':-1, 'F':-1, 'P':-2, 'S': 0, 'T': 0, 'W':-2, 'Y':-1, 'V':-1, 'B':-1, 'Z':-1, 'X':-1, '*':-4},
+    '*': {'A':-4, 'R':-4, 'N':-4, 'D':-4, "C":-4, 'Q':-4, 'E':-4, 'G':-4, 'H':-4, 'I':-4, 'L':-4, 'K':-4, 'M':-4, 'F':-4, 'P':-4, 'S':-4, 'T':-4, 'W':-4, 'Y':-4, 'V':-4, 'B':-4, 'Z':-4, 'X':-4, '*': 1}
+}
 
 
 def calc_matrix(row_seq: str, col_seq: str):
-    cols = np.int_(len(col_seq))
-    rows = np.int_(len(row_seq))
+    cols = len(col_seq)
+    rows = len(row_seq)
 
     score_matrix = [[[0 for _ in range(rows + 1)] for _ in range(3)] for _ in range(2)]
-    matrix_direction = [[np.zeros(cols + 1, dtype=np.bool_) for _ in range(rows + 1)] for _ in range(4)]
+    matrix_direction = [[zeros(cols + 1, dtype=bool_) for _ in range(rows + 1)] for _ in range(4)]
 
-    for row in range(1, rows+1):
-        side = -10 - row * 1
-        score_matrix[0][0][row] = side
-        score_matrix[0][1][row] = side
-        score_matrix[0][2][row] = -32768
+    for row in range(1, rows + 1):
+        score_matrix[0][0][row] = -row - 10
+        score_matrix[0][1][row] = -row - 10
+        score_matrix[0][2][row] = -2147483647
+
+    score_matrix[0][1][0] = -2147483647
+    score_matrix[1][1][0] = -2147483647
+
+    indexes_options = [[1, 0], [0, 1]]
 
     # fill matrix
-    for col in range(1, cols+1):
-        indexes = [(col - 1) % 2, col % 2]
+    for col in range(1, cols + 1):
+        indexes = indexes_options[col % 2]
 
-        side = -10 - col * 1
-        score_matrix[indexes[1]][0][0] = side
-        score_matrix[indexes[1]][1][0] = -32768
-        score_matrix[indexes[1]][2][0] = side
+        score_matrix[indexes[1]][0][0] = -col - 10
+        score_matrix[indexes[1]][2][0] = -col - 10
 
-        for row in range(1, rows+1):
+        first_letter_dict = BLOSUM[col_seq[col - 1]]
 
-            if score_matrix[indexes[1]][0][row - 1] - score_matrix[indexes[1]][1][row - 1] < 10:
-                # set lower max
-                score_matrix[indexes[1]][1][row] = score_matrix[indexes[1]][1][row - 1] - 1
+        for row in range(1, rows + 1):
+
+            middle_up, lower_up = score_matrix[indexes[1]][0][row - 1], score_matrix[indexes[1]][1][row - 1]
+            if middle_up < lower_up + 10:
+                lower_max = lower_up - 1
                 # set lower max index
-                matrix_direction[1][row][col] = np.True_
+                matrix_direction[1][row][col] = True_
             else:
-                # set lower max
-                score_matrix[indexes[1]][1][row] = score_matrix[indexes[1]][0][row - 1] - 11
+                lower_max = middle_up - 11
 
-            if score_matrix[indexes[0]][0][row] - score_matrix[indexes[0]][2][row] < 10:
-                # set upper max
-                score_matrix[indexes[1]][2][row] = score_matrix[indexes[0]][2][row] - 1
+            middle_left, upper_left = score_matrix[indexes[0]][0][row], score_matrix[indexes[0]][2][row]
+            if middle_left < upper_left + 10:
+                upper_max = upper_left - 1
                 # set upper max index
-                matrix_direction[2][row][col] = np.True_
+                matrix_direction[2][row][col] = True_
             else:
-                # set upper max
-                score_matrix[indexes[1]][2][row] = score_matrix[indexes[0]][0][row] - 11
+                upper_max = middle_left - 11
 
             # calculate and assign middle matrix
 
-            follow_score = score_matrix[indexes[0]][0][row - 1] + substitution_matrix[row_seq[row - 1] + col_seq[col - 1]]
+            # follow middle cost
+            middle_max = score_matrix[indexes[0]][0][row - 1] + first_letter_dict.get(row_seq[row - 1])
 
             # compare lower and upper
-            if score_matrix[indexes[1]][1][row] < score_matrix[indexes[1]][2][row]:
-                # compare follow and upper
-                if follow_score < score_matrix[indexes[1]][2][row]:
-                    # set middle max
-                    score_matrix[indexes[1]][0][row] = score_matrix[indexes[1]][2][row]
+            if lower_max < upper_max:
+                if middle_max < upper_max:
+                    middle_max = upper_max
                     # set middle max index
-                    matrix_direction[0][row][col] = np.True_
-                else:
-                    # set middle max
-                    score_matrix[indexes[1]][0][row] = follow_score
+                    matrix_direction[0][row][col] = True_
                 # set lower / upper direction
-                matrix_direction[3][row][col] = np.True_
+                matrix_direction[3][row][col] = True_
             else:
-                # compare follow and lower
-                if follow_score < score_matrix[indexes[1]][1][row]:
-                    # set middle max
-                    score_matrix[indexes[1]][0][row] = score_matrix[indexes[1]][1][row]
+                if middle_max < lower_max:
+                    middle_max = lower_max
                     # set middle max index
-                    matrix_direction[0][row][col] = np.True_
-                else:
-                    # set middle max
-                    score_matrix[indexes[1]][0][row] = follow_score
+                    matrix_direction[0][row][col] = True_
 
-    score = int(max((score_matrix[cols % 2][x][-1] for x in range(3))))
+            score_matrix[indexes[1]][0][row], score_matrix[indexes[1]][1][row], score_matrix[indexes[1]][2][row] = middle_max, lower_max, upper_max
+
+    score = max((score_matrix[cols % 2][x][-1] for x in range(3)))
 
     return score, matrix_direction
 
@@ -179,14 +109,12 @@ def load_file(filename: str):
 
 
 def global_alignment_score(filename: str):
-    gc.disable()
     col_seq, row_seq = load_file(filename)
     score, _ = calc_matrix(row_seq, col_seq)
     return score
 
 
 def global_alignment(filename: str):
-    gc.disable()
     col_seq, row_seq = load_file(filename)
     _, matrix_dir = calc_matrix(row_seq, col_seq)
 
@@ -194,8 +122,8 @@ def global_alignment(filename: str):
     col = len(col_seq)
 
     # backtrack route
-    row_align = []
-    col_align = []
+    row_align = ""
+    col_align = ""
 
     current = 0
 
@@ -210,21 +138,21 @@ def global_alignment(filename: str):
                 else:
                     current = 1
             else:
-                row_align = [row_seq[row - 1]] + row_align
-                col_align = [col_seq[col - 1]] + col_align
+                row_align = row_seq[row - 1] + row_align
+                col_align = col_seq[col - 1] + col_align
                 col -= 1
                 row -= 1
 
         elif current == 1:
-            row_align = [row_seq[row - 1]] + row_align
-            col_align = ["-"] + col_align
+            row_align = row_seq[row - 1] + row_align
+            col_align = '-' + col_align
             row -= 1
             if not direction:
                 current = 0
 
         else:
-            col_align = [col_seq[col - 1]] + col_align
-            row_align = ["-"] + row_align
+            col_align = col_seq[col - 1] + col_align
+            row_align = '-' + row_align
             col -= 1
             if not direction:
                 current = 0
@@ -232,15 +160,12 @@ def global_alignment(filename: str):
     # fill remaining
     if row > 0:
         for i in reversed(range(0, row)):
-            row_align = [row_seq[i]] + row_align
-            col_align = ["-"] + col_align
+            row_align = row_seq[i] + row_align
+            col_align = '-' + col_align
     if col > 0:
         for i in reversed(range(0, col)):
-            col_align = [col_seq[i]] + col_align
-            row_align = ["-"] + row_align
-
-    row_align = ''.join(row_align)
-    col_align = ''.join(col_align)
+            col_align = col_seq[i] + col_align
+            row_align = '-' + row_align
 
     return col_align, row_align
 
