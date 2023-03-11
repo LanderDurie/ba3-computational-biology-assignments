@@ -81,10 +81,6 @@ def calc_matrix(row_seq: str, col_seq: str):
     matrix_direction_lower = zeros(total, dtype=bool_)
     matrix_direction_upper = zeros(total, dtype=bool_)
     matrix_direction_spec = zeros(total, dtype=bool_)
-    # matrix_direction_middle = 0
-    # matrix_direction_lower = 0
-    # matrix_direction_upper = 0
-    # matrix_direction_spec = 0
 
     # initialize score matrix
     for row in range(1, rows):
@@ -116,7 +112,6 @@ def calc_matrix(row_seq: str, col_seq: str):
                 lower_max = lower_up - 1
                 # set lower max index
                 matrix_direction_lower[total_index] = True_
-                # matrix_direction_lower |= 1 << total_index
             else:
                 lower_max = middle_up - 11
 
@@ -126,7 +121,6 @@ def calc_matrix(row_seq: str, col_seq: str):
                 upper_max = upper_left - 1
                 # set upper max index
                 matrix_direction_upper[total_index] = True_
-                # matrix_direction_upper |= 1 << total_index
             else:
                 upper_max = middle_left - 11
 
@@ -139,16 +133,13 @@ def calc_matrix(row_seq: str, col_seq: str):
                     middle_max = upper_max
                     # set middle max index
                     matrix_direction_middle[total_index] = True_
-                    # matrix_direction_middle |= 1 << total_index
                 # set lower / upper direction
                 matrix_direction_spec[total_index] = True_
-                # matrix_direction_spec |= 1 << total_index
             else:
                 if middle_max < lower_max:
                     middle_max = lower_max
                     # set middle max index
                     matrix_direction_middle[total_index] = True_
-                    # matrix_direction_middle |= 1 << total_index
 
             # assign values in score matrix
             score_cols_middle_new[row], score_cols_lower_new[row], score_cols_upper_new[row] = middle_max, lower_max, upper_max
@@ -221,13 +212,14 @@ def global_alignment(filename: str):
                 current = 0
 
     # fill remaining
-    if row > 0:
-        for i in reversed(range(0, row)):
+    if row >= 0:
+        for i in reversed(range(row+1)):
             row_align = row_seq[i] + row_align
             col_align = '-' + col_align
 
-    if col > 0:
-        for i in reversed(range(0, col)):
+    if col >= 0:
+        print(col)
+        for i in reversed(range(col+1)):
             col_align = col_seq[i] + col_align
             row_align = '-' + row_align
     return col_align, row_align
@@ -250,4 +242,4 @@ if __name__ == '__main__':
     # affine_gap("data/data_1000_benchmark.fna")
     # affine_gap("data/data_19_affine.fna")
     affine_gap("data/data_01_affine.fna")
-    # affine_gap("data/data_04_affine.fna")
+    # affine_gap("data/data_07_affine.fna")
