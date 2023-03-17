@@ -77,7 +77,7 @@ def global_alignment(filename: str):
         for i in reversed(range(0, row)):
             row_align = [row_seq[i]] + row_align
             col_align = ["-"] + col_align
-    if col > 0:
+    if col > 0
         for i in reversed(range(0, col)):
             col_align = [col_seq[i]] + col_align
             row_align = ["-"] + row_align
@@ -101,4 +101,4 @@ def test(filename: str):
     print(f"ETA: {time.time() - start}")
 
 
-test("data/data_02.fna")
+test("data/data_01.fna")
