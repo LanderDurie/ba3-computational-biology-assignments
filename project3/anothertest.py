@@ -25,7 +25,7 @@ class UnrootedTree:
     def loadtxt(fname):
 
         edges = []
-        with open(fname, 'r') as file:
+        with open(fname, 'r', encoding='utf-8') as file:
             lines = file.readlines()
 
         for line in lines:
@@ -50,8 +50,7 @@ class UnrootedTree:
             if res_path is not None:
                 if score:
                     return res_path[1]
-                else:
-                    return res_path[0]
+                return res_path[0]
         return 0
 
     def dfs(self, current_node, stop, edge_path, node_path, weight):
@@ -75,11 +74,11 @@ class UnrootedTree:
                                     node_path + [next_edge[0]],
                                     weight + next_edge[2])
             if res_path is not None:
-                return res_path
+                return res_path, weight
 
     def next_edges(self, i, path):
         return [edge for edge in self.edges if
-                (edge[0] == i or edge[1] == i) and edge not in path]
+                i in (edge[0], edge[1]) and edge not in path]
 
     def distance_matrix(self):
         leaves = self.get_leaves(self.edges)
@@ -101,11 +100,8 @@ class UnrootedTree:
 
 class DistanceMatrix:
 
-    def __init__(self, matrix, dtype=None, copy: bool = True, order: str = 'K',
-                 subok: bool = False,
-                 ndmin: int = 0):
-        self.matrix = np.array(matrix, dtype=dtype, copy=copy, order=order,
-                               subok=subok, ndmin=ndmin)
+    def __init__(self, matrix, *args, **kwargs):
+        self.matrix = np.array(matrix, *args, **kwargs)
 
     def __repr__(self):
         return f"DistanceMatrix({str(self)})"
@@ -113,38 +109,14 @@ class DistanceMatrix:
     def __str__(self):
         return str(self.matrix)
 
-    def savetxt(self, fname, fmt='%.18e', delimiter=' ', newline='\n',
-                header='', footer='', comments='# ', encoding=None):
+    def savetxt(self, filename, *args, **kwargs):
         np.savetxt(
-            fname=fname,
-            X=self.matrix,
-            fmt=fmt,
-            delimiter=delimiter,
-            newline=newline,
-            header=header,
-            footer=footer,
-            comments=comments,
-            encoding=encoding)
+            fname=filename, *args, **kwargs)
 
     @staticmethod
-    def loadtxt(fname, dtype=np.dtype(float), comments='#', delimiter=None,
-                converters=None, skiprows=0, usecols=None, unpack=False,
-                ndmin=0, encoding='bytes', max_rows=None, *, quotechar=None,
-                like=None):
+    def loadtxt(filename, *args, **kwargs):
         matrix = np.loadtxt(
-            fname=fname,
-            dtype=dtype,
-            comments=comments,
-            delimiter=delimiter,
-            converters=converters,
-            skiprows=skiprows,
-            usecols=usecols,
-            unpack=unpack,
-            ndmin=ndmin,
-            encoding=encoding,
-            max_rows=max_rows,
-            quotechar=quotechar,
-            like=like
+            fname=filename, *args, **kwargs
         )
 
         return DistanceMatrix(matrix)
@@ -152,9 +124,9 @@ class DistanceMatrix:
     def limb_length(self, j):
 
         smallest = sys.maxsize
-        for i in range(len(self.matrix)):
+        for _, i in enumerate(self.matrix):
             for k in range(len(self.matrix)):
-                if j != i and j != k:
+                if j not in (i, k):
                     value = (self.matrix[i][j] + self.matrix[j][k] -
                              self.matrix[i][k]) / 2
                     if value < smallest:
@@ -170,10 +142,10 @@ class DistanceMatrix:
 
         # add row/col for node indexes
 
-        M = dict()
+        M = []
 
         for i in np.arange(n):
-            M[i] = i
+            M += [i]
 
         return UnrootedTree(*self.neighbour_joining_recursive(D, M, n, n - 1))
 
@@ -181,7 +153,7 @@ class DistanceMatrix:
 
         # end condition
         if n == 2:
-            return [(int(M[1]), int(M[2]), D[0][1])]
+            return [(int(M[0]), int(M[1]), D[0][1])]
 
         # list of all possible distances
         distances = self.total_distance(D, np.arange(n))
@@ -192,20 +164,17 @@ class DistanceMatrix:
         Dnew = (n-2) * D + calc_Dnew(distances[:, np.newaxis], distances[np.newaxis, :])
 
         # find minimum indexes in D'
-        def find_min():
-            i = 0
-            j = 0
-            min_val = sys.maxsize
-            for i_it in range(n):
-                for j_it in range(n):
-                    if Dnew[i_it][j_it] < min_val and i_it != j_it:
-                        min_val = Dnew[i_it][j_it]
-                        i = i_it
-                        j = j_it
-
-            return i, j
-
-        i, j = find_min()
+        i = 0
+        j = 0
+        min_val = sys.maxsize
+        for i_it in range(n):
+            for j_it in range(n):
+                if Dnew[i_it][j_it] < min_val and i_it != j_it:
+                    min_val = Dnew[i_it][j_it]
+                    i = i_it
+                    j = j_it
+        if i > j:
+            i, j = j, i
 
         delta = (distances[i] - distances[j]) / (n - 2)
 
@@ -213,21 +182,23 @@ class DistanceMatrix:
         limb_length_j = 1 / 2 * (D[i][j] - delta)
 
 
-
-
         node_index_i = M[i]
         node_index_j = M[j]
 
         # add
-        M[i] = node_index+1
+        M[j] = node_index+1
 
-        for k in range(0, n):
-            D[i][k] = D[k][i] = 1 / 2 * (D[k][i] + D[k][j] - D[i][j])
+        newRow = np.zeros(n)
+        for k in range(n):
+            newRow[k] = 1 / 2 * (D[k][i] + D[k][j] - D[i][j])
+        D[j] = newRow
+        for f in range(n):
+            D[f][j] = newRow[f]
 
-        M[j] = -1
+        del M[i]
         # remove
-        D = np.delete(D, j, 0)
-        D = np.delete(D, j, 1)
+        D = np.delete(D, i, 0)
+        D = np.delete(D, i, 1)
 
 
         T = self.neighbour_joining_recursive(D, M, n - 1, node_index + 1)
@@ -241,6 +212,6 @@ class DistanceMatrix:
 if __name__ == '__main__':
     import time
     start = time.time()
-    D = DistanceMatrix.loadtxt('data/distances.txt')
+    D = DistanceMatrix.loadtxt('data/200_benchmark.txt')
     print(D.neighbour_joining())
     print(time.time() - start)
