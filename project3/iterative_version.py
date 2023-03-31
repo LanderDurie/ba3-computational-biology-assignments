@@ -30,12 +30,24 @@ class UnrootedTree:
     """
 
     def __init__(self, *argv):
+        """
+        Initialize a new UnrootedTree
+        :param argv: list of edges
+        """
         self.edges = argv
 
     def __repr__(self):
+        """
+        create a representation of this class, format: UnrootedTree({edgelist})
+        :return: string with the representation of this class
+        """
         return f"UnrootedTree{str(self)}"
 
     def __str__(self):
+        """
+        create a string of this class, format: {edgelist}
+        :return: string of this class
+        """
         return str(self.edges)
 
     @staticmethod
@@ -204,12 +216,24 @@ class DistanceMatrix:
     """
 
     def __init__(self, matrix, *args, **kwargs):
+        """
+        Initialize a new DistanceMatrix
+        :param matrix: initial matrix data
+        """
         self.matrix = np.array(matrix, *args, **kwargs)
 
     def __repr__(self):
+        """
+        create a representation of this class, format: DistanceMatrix({matrix})
+        :return: string with the representation of this class
+        """
         return f"DistanceMatrix({str(self)})"
 
     def __str__(self):
+        """
+        create a string of this class, format: {matrix}
+        :return: string of this class
+        """
         return str(self.matrix.tolist())
 
     def savetxt(self, X: str, *args, **kwargs):
@@ -249,7 +273,8 @@ class DistanceMatrix:
 
     def neighbour_joining(self):
         """
-        calculate neighbour joining matrix
+        calculate an unrooted tree that fits the matrix that exists in this
+        class under `self.matrix`
         """
 
         n = len(self.matrix)
@@ -281,7 +306,6 @@ class DistanceMatrix:
             # find minimum indexes in D'
             np.fill_diagonal(Dnew, np.inf)
             (i, j) = np.unravel_index(np.argmin(Dnew, axis=None), Dnew.shape)
-
 
             delta = (distances[i] - distances[j]) / (n - 2)
 
